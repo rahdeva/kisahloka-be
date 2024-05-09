@@ -1,3 +1,4 @@
+// Origin model
 package models
 
 import (
@@ -7,29 +8,30 @@ import (
 	"time"
 )
 
-type Type struct {
-	TypeID    int       `json:"type_id"`
-	TypeName  string    `json:"type_name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+type Origin struct {
+	OriginID   int       `json:"origin_id"`
+	OriginName string    `json:"origin_name"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
+// GetAllOrigins retrieves all origins with pagination and optional keyword filtering
+func GetAllOrigins(page, pageSize int, keyword string) (Response, error) {
 	var res Response
 	var arrobj reflect.Value
 	var meta Meta
 
 	con := db.CreateCon()
 
-	// Add a WHERE clause to filter types based on the keyword
+	// Add a WHERE clause to filter origins based on the keyword
 	whereClause := ""
 	if keyword != "" {
-		whereClause = " WHERE type_name LIKE '%" + keyword + "%'"
+		whereClause = " WHERE origin_name LIKE '%" + keyword + "%'"
 	}
 
 	// Count total items in the database
 	var totalItems int
-	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM type %s", whereClause)).Scan(&totalItems)
+	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM origin %s", whereClause)).Scan(&totalItems)
 	if err != nil {
 		return res, err
 	}
@@ -42,8 +44,8 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 		meta.TotalItems = totalItems
 
 		res.Data = map[string]interface{}{
-			"types": make([]interface{}, 0), // Empty slice
-			"meta":  meta,
+			"origins": make([]interface{}, 0), // Empty slice
+			"meta":    meta,
 		}
 
 		return res, nil
@@ -65,7 +67,7 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 
 	// Calculate the offset based on the page number and page size
 	offset := (page - 1) * pageSize
-	sqlStatement := fmt.Sprintf("SELECT * FROM type %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
+	sqlStatement := fmt.Sprintf("SELECT * FROM origin %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
 	rows, err := con.Query(sqlStatement)
 	if err != nil {
 		return res, err
@@ -73,10 +75,10 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var obj Type
+		var obj Origin
 		err := rows.Scan(
-			&obj.TypeID,
-			&obj.TypeName,
+			&obj.OriginID,
+			&obj.OriginName,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
 		)
@@ -101,28 +103,29 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 	}
 
 	res.Data = map[string]interface{}{
-		"types": arrobj.Interface(),
-		"meta":  meta,
+		"origins": arrobj.Interface(),
+		"meta":    meta,
 	}
 
 	return res, nil
 }
 
-func GetTypeDetail(typeID int) (Response, error) {
-	var typeDetail Type
+// GetOriginDetail retrieves details of a specific origin by ID
+func GetOriginDetail(originID int) (Response, error) {
+	var originDetail Origin
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "SELECT * FROM type WHERE type_id = ?"
+	sqlStatement := "SELECT * FROM origin WHERE origin_id = ?"
 
-	row := con.QueryRow(sqlStatement, typeID)
+	row := con.QueryRow(sqlStatement, originID)
 
 	err := row.Scan(
-		&typeDetail.TypeID,
-		&typeDetail.TypeName,
-		&typeDetail.CreatedAt,
-		&typeDetail.UpdatedAt,
+		&originDetail.OriginID,
+		&originDetail.OriginName,
+		&originDetail.CreatedAt,
+		&originDetail.UpdatedAt,
 	)
 
 	if err != nil {
@@ -136,22 +139,23 @@ func GetTypeDetail(typeID int) (Response, error) {
 	}
 
 	// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
-	typeDetail.CreatedAt = typeDetail.CreatedAt.In(loc)
-	typeDetail.UpdatedAt = typeDetail.UpdatedAt.In(loc)
+	originDetail.CreatedAt = originDetail.CreatedAt.In(loc)
+	originDetail.UpdatedAt = originDetail.UpdatedAt.In(loc)
 
 	res.Data = map[string]interface{}{
-		"type": typeDetail,
+		"origin": originDetail,
 	}
 
 	return res, nil
 }
 
-func CreateType(typeName string) (Response, error) {
+// CreateOrigin creates a new origin
+func CreateOrigin(originName string) (Response, error) {
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "INSERT INTO type (type_name, created_at, updated_at) VALUES (?, ?, ?)"
+	sqlStatement := "INSERT INTO origin (origin_name, created_at, updated_at) VALUES (?, ?, ?)"
 
 	stmt, err := con.Prepare(sqlStatement)
 
@@ -169,7 +173,7 @@ func CreateType(typeName string) (Response, error) {
 	updated_at := time.Now()
 
 	result, err := stmt.Exec(
-		typeName,
+		originName,
 		created_at,
 		updated_at,
 	)
@@ -192,7 +196,8 @@ func CreateType(typeName string) (Response, error) {
 	return res, nil
 }
 
-func UpdateType(typeID int, updateFields map[string]interface{}) (Response, error) {
+// UpdateOrigin updates an existing origin
+func UpdateOrigin(originID int, updateFields map[string]interface{}) (Response, error) {
 	var res Response
 
 	// Load the UTC+8 time zone
@@ -222,8 +227,8 @@ func UpdateType(typeID int, updateFields map[string]interface{}) (Response, erro
 	}
 
 	// Construct the final SQL statement
-	sqlStatement := "UPDATE type " + setStatement + " WHERE type_id = ?"
-	values = append(values, typeID)
+	sqlStatement := "UPDATE origin " + setStatement + " WHERE origin_id = ?"
+	values = append(values, originID)
 
 	stmt, err := con.Prepare(sqlStatement)
 	if err != nil {
@@ -248,12 +253,13 @@ func UpdateType(typeID int, updateFields map[string]interface{}) (Response, erro
 	return res, nil
 }
 
-func DeleteType(typeID int) (Response, error) {
+// DeleteOrigin deletes an origin by ID
+func DeleteOrigin(originID int) (Response, error) {
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "DELETE FROM type WHERE type_id = ?"
+	sqlStatement := "DELETE FROM origin WHERE origin_id = ?"
 
 	stmt, err := con.Prepare(sqlStatement)
 
@@ -261,7 +267,7 @@ func DeleteType(typeID int) (Response, error) {
 		return res, err
 	}
 
-	result, err := stmt.Exec(typeID)
+	result, err := stmt.Exec(originID)
 
 	if err != nil {
 		return res, err
@@ -273,8 +279,8 @@ func DeleteType(typeID int) (Response, error) {
 	}
 
 	res.Data = map[string]interface{}{
-		"rowsAffected":    rowsAffected,
-		"deleted_type_id": typeID,
+		"rowsAffected":      rowsAffected,
+		"deleted_origin_id": originID,
 	}
 
 	return res, err

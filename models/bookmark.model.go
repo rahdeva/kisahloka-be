@@ -3,33 +3,34 @@ package models
 import (
 	"fmt"
 	"kisahloka_be/db"
-	"reflect"
 	"time"
 )
 
-type Type struct {
-	TypeID    int       `json:"type_id"`
-	TypeName  string    `json:"type_name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+type Bookmark struct {
+	BookmarkID int       `json:"bookmark_id"`
+	UserID     int       `json:"user_id"`
+	StoryID    int       `json:"story_id"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
+// GetAllBookmarks retrieves all bookmarks with pagination and optional keyword search
+func GetAllBookmarks(page, pageSize int, keyword string) (Response, error) {
 	var res Response
-	var arrobj reflect.Value
+	var arrobj []Bookmark
 	var meta Meta
 
 	con := db.CreateCon()
 
-	// Add a WHERE clause to filter types based on the keyword
+	// Add a WHERE clause to filter bookmarks based on the keyword
 	whereClause := ""
 	if keyword != "" {
-		whereClause = " WHERE type_name LIKE '%" + keyword + "%'"
+		whereClause = " WHERE user_id LIKE '%" + keyword + "%'"
 	}
 
 	// Count total items in the database
 	var totalItems int
-	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM type %s", whereClause)).Scan(&totalItems)
+	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM bookmark %s", whereClause)).Scan(&totalItems)
 	if err != nil {
 		return res, err
 	}
@@ -42,8 +43,8 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 		meta.TotalItems = totalItems
 
 		res.Data = map[string]interface{}{
-			"types": make([]interface{}, 0), // Empty slice
-			"meta":  meta,
+			"bookmarks": make([]Bookmark, 0), // Empty slice
+			"meta":      meta,
 		}
 
 		return res, nil
@@ -65,7 +66,7 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 
 	// Calculate the offset based on the page number and page size
 	offset := (page - 1) * pageSize
-	sqlStatement := fmt.Sprintf("SELECT * FROM type %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
+	sqlStatement := fmt.Sprintf("SELECT * FROM bookmark %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
 	rows, err := con.Query(sqlStatement)
 	if err != nil {
 		return res, err
@@ -73,10 +74,11 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var obj Type
+		var obj Bookmark
 		err := rows.Scan(
-			&obj.TypeID,
-			&obj.TypeName,
+			&obj.BookmarkID,
+			&obj.UserID,
+			&obj.StoryID,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
 		)
@@ -88,11 +90,7 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 		obj.CreatedAt = obj.CreatedAt.In(loc)
 		obj.UpdatedAt = obj.UpdatedAt.In(loc)
 
-		if !arrobj.IsValid() {
-			arrobj = reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(obj)), 0, 0)
-		}
-
-		arrobj = reflect.Append(arrobj, reflect.ValueOf(obj))
+		arrobj = append(arrobj, obj)
 
 		meta.Limit = pageSize
 		meta.Page = page
@@ -101,28 +99,30 @@ func GetAllTypes(page, pageSize int, keyword string) (Response, error) {
 	}
 
 	res.Data = map[string]interface{}{
-		"types": arrobj.Interface(),
-		"meta":  meta,
+		"bookmarks": arrobj,
+		"meta":      meta,
 	}
 
 	return res, nil
 }
 
-func GetTypeDetail(typeID int) (Response, error) {
-	var typeDetail Type
+// GetBookmarkDetail retrieves a single bookmark by its ID
+func GetBookmarkDetail(bookmarkID int) (Response, error) {
+	var bookmarkDetail Bookmark
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "SELECT * FROM type WHERE type_id = ?"
+	sqlStatement := "SELECT * FROM bookmark WHERE bookmark_id = ?"
 
-	row := con.QueryRow(sqlStatement, typeID)
+	row := con.QueryRow(sqlStatement, bookmarkID)
 
 	err := row.Scan(
-		&typeDetail.TypeID,
-		&typeDetail.TypeName,
-		&typeDetail.CreatedAt,
-		&typeDetail.UpdatedAt,
+		&bookmarkDetail.BookmarkID,
+		&bookmarkDetail.UserID,
+		&bookmarkDetail.StoryID,
+		&bookmarkDetail.CreatedAt,
+		&bookmarkDetail.UpdatedAt,
 	)
 
 	if err != nil {
@@ -136,22 +136,23 @@ func GetTypeDetail(typeID int) (Response, error) {
 	}
 
 	// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
-	typeDetail.CreatedAt = typeDetail.CreatedAt.In(loc)
-	typeDetail.UpdatedAt = typeDetail.UpdatedAt.In(loc)
+	bookmarkDetail.CreatedAt = bookmarkDetail.CreatedAt.In(loc)
+	bookmarkDetail.UpdatedAt = bookmarkDetail.UpdatedAt.In(loc)
 
 	res.Data = map[string]interface{}{
-		"type": typeDetail,
+		"bookmark": bookmarkDetail,
 	}
 
 	return res, nil
 }
 
-func CreateType(typeName string) (Response, error) {
+// CreateBookmark creates a new bookmark
+func CreateBookmark(userID, storyID int) (Response, error) {
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "INSERT INTO type (type_name, created_at, updated_at) VALUES (?, ?, ?)"
+	sqlStatement := "INSERT INTO bookmark (user_id, story_id, created_at, updated_at) VALUES (?, ?, ?, ?)"
 
 	stmt, err := con.Prepare(sqlStatement)
 
@@ -169,7 +170,8 @@ func CreateType(typeName string) (Response, error) {
 	updated_at := time.Now()
 
 	result, err := stmt.Exec(
-		typeName,
+		userID,
+		storyID,
 		created_at,
 		updated_at,
 	)
@@ -192,7 +194,8 @@ func CreateType(typeName string) (Response, error) {
 	return res, nil
 }
 
-func UpdateType(typeID int, updateFields map[string]interface{}) (Response, error) {
+// UpdateBookmark updates an existing bookmark
+func UpdateBookmark(bookmarkID, userID, storyID int) (Response, error) {
 	var res Response
 
 	// Load the UTC+8 time zone
@@ -201,36 +204,13 @@ func UpdateType(typeID int, updateFields map[string]interface{}) (Response, erro
 		return res, err
 	}
 
-	// Add or update the 'updated_at' field in the updateFields map
-	updateFields["updated_at"] = time.Now().In(loc)
-	updated_at := updateFields["updated_at"]
-
 	con := db.CreateCon()
 
 	// Construct the SET part of the SQL statement dynamically
-	setStatement := "SET "
-	values := []interface{}{}
-	i := 0
+	sqlStatement := "UPDATE bookmark SET user_id = ?, story_id = ?, updated_at = ? WHERE bookmark_id = ?"
 
-	for fieldName, fieldValue := range updateFields {
-		if i > 0 {
-			setStatement += ", "
-		}
-		setStatement += fieldName + " = ?"
-		values = append(values, fieldValue)
-		i++
-	}
-
-	// Construct the final SQL statement
-	sqlStatement := "UPDATE type " + setStatement + " WHERE type_id = ?"
-	values = append(values, typeID)
-
-	stmt, err := con.Prepare(sqlStatement)
-	if err != nil {
-		return res, err
-	}
-
-	result, err := stmt.Exec(values...)
+	// Execute the SQL statement
+	result, err := con.Exec(sqlStatement, userID, storyID, time.Now().In(loc), bookmarkID)
 	if err != nil {
 		return res, err
 	}
@@ -242,18 +222,18 @@ func UpdateType(typeID int, updateFields map[string]interface{}) (Response, erro
 
 	res.Data = map[string]interface{}{
 		"rowsAffected": rowsAffected,
-		"updated_at":   updated_at,
 	}
 
 	return res, nil
 }
 
-func DeleteType(typeID int) (Response, error) {
+// DeleteBookmark deletes a bookmark by its ID
+func DeleteBookmark(bookmarkID int) (Response, error) {
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "DELETE FROM type WHERE type_id = ?"
+	sqlStatement := "DELETE FROM bookmark WHERE bookmark_id = ?"
 
 	stmt, err := con.Prepare(sqlStatement)
 
@@ -261,7 +241,7 @@ func DeleteType(typeID int) (Response, error) {
 		return res, err
 	}
 
-	result, err := stmt.Exec(typeID)
+	result, err := stmt.Exec(bookmarkID)
 
 	if err != nil {
 		return res, err
@@ -273,9 +253,9 @@ func DeleteType(typeID int) (Response, error) {
 	}
 
 	res.Data = map[string]interface{}{
-		"rowsAffected":    rowsAffected,
-		"deleted_type_id": typeID,
+		"rowsAffected":        rowsAffected,
+		"deleted_bookmark_id": bookmarkID,
 	}
 
-	return res, err
+	return res, nil
 }
