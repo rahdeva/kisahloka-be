@@ -3,6 +3,7 @@
 package models
 
 import (
+	"database/sql"
 	"fmt"
 	"kisahloka_be/db"
 	"strconv"
@@ -11,34 +12,70 @@ import (
 )
 
 type Story struct {
-	StoryID        int                `json:"story_id"`
-	TypeID         int                `json:"type_id"`
-	TypeName       string             `json:"type_name"`
-	OriginID       int                `json:"origin_id"`
-	OriginName     string             `json:"origin_name"`
-	Title          string             `json:"title"`
-	TotalContent   int                `json:"total_content"`
-	ReleasedDate   time.Time          `json:"released_date"`
-	ThumbnailImage string             `json:"thumbnail_image"`
-	ReadCount      int                `json:"read_count"`
-	IsHighlighted  int                `json:"is_highligthed"`
-	IsFavorited    int                `json:"is_favorited"`
-	GenreID        []int              `json:"genre_id"`
-	GenreName      []string           `json:"genre_name"`
-	Synopsis       string             `json:"synopsis"`
-	StoryContent   []StoryContentItem `json:"story_content"`
-	CreatedAt      time.Time          `json:"created_at"`
-	UpdatedAt      time.Time          `json:"updated_at"`
+	StoryID        int                  `json:"story_id"`
+	TypeID         int                  `json:"type_id"`
+	TypeName       string               `json:"type_name"`
+	OriginID       int                  `json:"origin_id"`
+	OriginName     string               `json:"origin_name"`
+	Title          string               `json:"title"`
+	TotalContent   int                  `json:"total_content"`
+	ReleasedDate   time.Time            `json:"released_date"`
+	ThumbnailImage string               `json:"thumbnail_image"`
+	ReadCount      int                  `json:"read_count"`
+	IsHighlighted  int                  `json:"is_highligthed"`
+	IsFavorited    int                  `json:"is_favorited"`
+	GenreID        []int                `json:"genre_id"`
+	GenreName      []string             `json:"genre_name"`
+	Synopsis       string               `json:"synopsis"`
+	StoryContent   []StoryContentOnList `json:"story_content"`
+	CreatedAt      time.Time            `json:"created_at"`
+	UpdatedAt      time.Time            `json:"updated_at"`
 }
 
-type StoryContentItem struct {
+type StoryPreview struct {
+	StoryID        int       `json:"story_id"`
+	TypeID         int       `json:"type_id"`
+	TypeName       string    `json:"type_name"`
+	OriginID       int       `json:"origin_id"`
+	OriginName     string    `json:"origin_name"`
+	Title          string    `json:"title"`
+	TotalContent   int       `json:"total_content"`
+	ReleasedDate   time.Time `json:"released_date"`
+	ThumbnailImage string    `json:"thumbnail_image"`
+	ReadCount      int       `json:"read_count"`
+	IsHighlighted  int       `json:"is_highligthed"`
+	IsFavorited    int       `json:"is_favorited"`
+	GenreName      []string  `json:"genre_name"`
+}
+
+type StoryDetail struct {
+	StoryID        int       `json:"story_id"`
+	TypeID         int       `json:"type_id"`
+	TypeName       string    `json:"type_name"`
+	OriginID       int       `json:"origin_id"`
+	OriginName     string    `json:"origin_name"`
+	Title          string    `json:"title"`
+	TotalContent   int       `json:"total_content"`
+	ReleasedDate   time.Time `json:"released_date"`
+	ThumbnailImage string    `json:"thumbnail_image"`
+	ReadCount      int       `json:"read_count"`
+	IsHighlighted  int       `json:"is_highligthed"`
+	IsFavorited    int       `json:"is_favorited"`
+	GenreID        []int     `json:"genre_id"`
+	GenreName      []string  `json:"genre_name"`
+	Synopsis       string    `json:"synopsis"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type StoryContentOnList struct {
 	Order       int    `json:"order"`
 	Image       string `json:"image"`
 	ContentIndo string `json:"content_indo"`
 	ContentEng  string `json:"content_eng"`
 }
 
-func GetAllStories(page, pageSize int, keyword string) (Response, error) {
+func GetAllStoriesCompleted(page, pageSize int, keyword string) (Response, error) {
 	var res Response
 	var arrobj []Story
 	var meta Meta
@@ -135,7 +172,7 @@ func GetAllStories(page, pageSize int, keyword string) (Response, error) {
 		obj.GenreName = strings.Split(genreNames, ",")
 
 		// Fetch story content
-		content, err := GetStoryContent(obj.StoryID)
+		content, err := GetStoryContentOnList(obj.StoryID)
 		if err != nil {
 			return res, err
 		}
@@ -157,8 +194,186 @@ func GetAllStories(page, pageSize int, keyword string) (Response, error) {
 	return res, nil
 }
 
-func GetStoryContent(storyID int) ([]StoryContentItem, error) {
-	var content []StoryContentItem
+func GetStoryContentOnStory(storyID int) (Response, error) {
+	var res Response
+	var storyContent []StoryContentOnList
+
+	con := db.CreateCon()
+
+	sqlStatement := `
+		SELECT 
+			` + "`order`" + `, image, content_indo, content_eng 
+		FROM 
+			story_content 
+		WHERE 
+			story_id = ? 
+		ORDER BY 
+			` + "`order`"
+
+	rows, err := con.Query(sqlStatement, storyID)
+	if err != nil {
+		return res, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var content StoryContentOnList
+		err := rows.Scan(
+			&content.Order,
+			&content.Image,
+			&content.ContentIndo,
+			&content.ContentEng,
+		)
+		if err != nil {
+			return res, err
+		}
+		storyContent = append(storyContent, content)
+	}
+
+	res.Data = map[string]interface{}{
+		"story": map[string]interface{}{
+			"story_id":      storyID,
+			"title":         "Keong Mas", // Jika title perlu diambil dari database, Anda dapat menggantinya dengan query ke tabel cerita
+			"story_content": storyContent,
+		},
+	}
+	res.Error = ""
+
+	return res, nil
+}
+
+func GetAllStoriesPreview(page, pageSize int, keyword string) (Response, error) {
+	var res Response
+	var arrobj []StoryPreview // Menggunakan struktur StoryPreview
+	var meta Meta
+
+	con := db.CreateCon()
+
+	// Add a WHERE clause to filter stories based on the keyword
+	whereClause := ""
+	if keyword != "" {
+		whereClause = " WHERE title LIKE '%" + keyword + "%'"
+	}
+
+	// Count total items in the database
+	var totalItems int
+	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM story %s", whereClause)).Scan(&totalItems)
+	if err != nil {
+		return res, err
+	}
+
+	// If no items are found, return an empty response data object
+	if totalItems == 0 {
+		meta.Limit = pageSize
+		meta.Page = page
+		meta.TotalPages = 0
+		meta.TotalItems = totalItems
+
+		res.Data = map[string]interface{}{
+			"stories": arrobj,
+			"meta":    meta,
+		}
+
+		return res, nil
+	}
+
+	// Load the UTC+8 time zone
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return res, err
+	}
+
+	// Calculate the total number of pages
+	totalPages := calculateTotalPages(totalItems, pageSize)
+
+	// Check if the requested page is greater than the total number of pages
+	if page > totalPages {
+		return res, fmt.Errorf("requested page (%d) exceeds total number of pages (%d)", page, totalPages)
+	}
+
+	// Calculate the offset based on the page number and page size
+	offset := (page - 1) * pageSize
+
+	// SQL statement using raw string literals
+	sqlStatement := `
+		SELECT 
+			s.story_id, 
+			s.type_id, 
+			s.origin_id, 
+			s.title, 
+			s.total_content, 
+			s.released_date, 
+			s.thumbnail_image, 
+			s.read_count, 
+			s.is_highligthed, 
+			s.is_favorited, 
+			t.type_name, 
+			o.origin_name, 
+			GROUP_CONCAT(g.genre_name) AS genre_name 
+		FROM 
+			story s 
+			LEFT JOIN type t ON s.type_id = t.type_id 
+			LEFT JOIN origin o ON s.origin_id = o.origin_id 
+			LEFT JOIN story_genre sg ON s.story_id = sg.story_id 
+			LEFT JOIN genre g ON sg.genre_id = g.genre_id ` + whereClause + `
+		GROUP BY 
+			s.story_id 
+		LIMIT ? OFFSET ?`
+
+	rows, err := con.Query(sqlStatement, pageSize, offset)
+	if err != nil {
+		return res, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var obj StoryPreview // Menggunakan struktur StoryPreview
+		var genreNames sql.NullString
+		err := rows.Scan(
+			&obj.StoryID,
+			&obj.TypeID,
+			&obj.OriginID,
+			&obj.Title,
+			&obj.TotalContent,
+			&obj.ReleasedDate,
+			&obj.ThumbnailImage,
+			&obj.ReadCount,
+			&obj.IsHighlighted,
+			&obj.IsFavorited,
+			&obj.TypeName,
+			&obj.OriginName,
+			&genreNames,
+		)
+		if err != nil {
+			return res, err
+		}
+
+		// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
+		obj.ReleasedDate = obj.ReleasedDate.In(loc)
+
+		// Parse genre names
+		if genreNames.Valid {
+			obj.GenreName = strings.Split(genreNames.String, ",")
+		}
+
+		arrobj = append(arrobj, obj)
+
+		meta.Limit = pageSize
+		meta.Page = page
+		meta.TotalPages = calculateTotalPages(totalItems, pageSize)
+		meta.TotalItems = totalItems
+	}
+
+	res.Data = map[string]interface{}{
+		"stories": arrobj,
+		"meta":    meta,
+	}
+
+	return res, nil
+}
+
+func GetStoryContentOnList(storyID int) ([]StoryContentOnList, error) {
+	var content []StoryContentOnList
 
 	con := db.CreateCon()
 
@@ -170,7 +385,7 @@ func GetStoryContent(storyID int) ([]StoryContentItem, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var c StoryContentItem
+		var c StoryContentOnList
 		err := rows.Scan(
 			&c.Order,
 			&c.Image,
@@ -187,7 +402,7 @@ func GetStoryContent(storyID int) ([]StoryContentItem, error) {
 }
 
 func GetStoryDetail(storyID int) (Response, error) {
-	var storyDetail Story
+	var storyDetail StoryDetail
 	var res Response
 
 	con := db.CreateCon()
@@ -244,12 +459,12 @@ func GetStoryDetail(storyID int) (Response, error) {
 	storyDetail.GenreID = stringsToIntSlice2(genreIDs)
 	storyDetail.GenreName = strings.Split(genreNames, ",")
 
-	// Fetch story content
-	content, err := GetStoryContent(storyID)
-	if err != nil {
-		return res, err
-	}
-	storyDetail.StoryContent = content
+	// // Fetch story content
+	// content, err := GetStoryContentOnList(storyID)
+	// if err != nil {
+	// 	return res, err
+	// }
+	// storyDetail.StoryContent = content
 
 	res.Data = map[string]interface{}{
 		"story": storyDetail,

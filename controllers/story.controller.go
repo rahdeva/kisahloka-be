@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func GetAllStories(c echo.Context) error {
+func GetAllStoriesCompleted(c echo.Context) error {
 	// Get query parameters for pagination
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil || page < 1 {
@@ -24,7 +24,32 @@ func GetAllStories(c echo.Context) error {
 
 	keyword := c.QueryParam("keyword")
 
-	result, err := models.GetAllStories(page, pageSize, keyword)
+	result, err := models.GetAllStoriesCompleted(page, pageSize, keyword)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			map[string]string{"message": err.Error()},
+		)
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
+func GetAllStoriesPreview(c echo.Context) error {
+	// Get query parameters for pagination
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(c.QueryParam("pageSize"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	keyword := c.QueryParam("keyword")
+
+	result, err := models.GetAllStoriesPreview(page, pageSize, keyword)
 	if err != nil {
 		return c.JSON(
 			http.StatusInternalServerError,
@@ -42,6 +67,23 @@ func GetStoryDetail(c echo.Context) error {
 	}
 
 	storyDetail, err := models.GetStoryDetail(storyID)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			map[string]string{"message": err.Error()},
+		)
+	}
+
+	return c.JSON(http.StatusOK, storyDetail)
+}
+
+func GetStoryContentOnStory(c echo.Context) error {
+	storyID, err := strconv.Atoi(c.Param("story_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid story_id"})
+	}
+
+	storyDetail, err := models.GetStoryContentOnStory(storyID)
 	if err != nil {
 		return c.JSON(
 			http.StatusInternalServerError,

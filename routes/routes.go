@@ -50,8 +50,10 @@ func Init() *echo.Echo {
 	e.DELETE("/api/v1/user/:user_id", controllers.DeleteUser)
 
 	// Story
-	e.GET("/api/v1/story", controllers.GetAllStories)
+	e.GET("/api/v1/story", controllers.GetAllStoriesCompleted)
+	e.GET("/api/v1/story_preview", controllers.GetAllStoriesPreview)
 	e.GET("/api/v1/story/:story_id", controllers.GetStoryDetail)
+	e.GET("/api/v1/story/contents/:story_id", controllers.GetStoryContentOnStory)
 	e.POST("/api/v1/story", controllers.CreateStory)
 	e.PUT("/api/v1/story", controllers.UpdateStory)
 	e.DELETE("/api/v1/story/:story_id", controllers.DeleteStory)

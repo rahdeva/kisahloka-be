@@ -33,7 +33,7 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 
 	// Count total items in the database
 	var totalItems int
-	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM users %s", whereClause)).Scan(&totalItems)
+	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM user %s", whereClause)).Scan(&totalItems)
 	if err != nil {
 		return res, err
 	}
@@ -69,7 +69,7 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 
 	// Calculate the offset based on the page number and page size
 	offset := (page - 1) * pageSize
-	sqlStatement := fmt.Sprintf("SELECT * FROM users %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
+	sqlStatement := fmt.Sprintf("SELECT * FROM user %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
 	rows, err := con.Query(sqlStatement)
 	if err != nil {
 		return res, err
@@ -121,7 +121,7 @@ func GetUserDetail(userID int) (Response, error) {
 
 	con := db.CreateCon()
 
-	sqlStatement := "SELECT * FROM users WHERE user_id = ?"
+	sqlStatement := "SELECT * FROM user WHERE user_id = ?"
 
 	row := con.QueryRow(sqlStatement, userID)
 
@@ -267,7 +267,7 @@ func DeleteUser(userID int) (Response, error) {
 
 	con := db.CreateCon()
 
-	sqlStatement := "DELETE FROM users WHERE user_id = ?"
+	sqlStatement := "DELETE FROM user WHERE user_id = ?"
 
 	stmt, err := con.Prepare(sqlStatement)
 

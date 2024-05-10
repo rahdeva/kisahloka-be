@@ -30,31 +30,46 @@ type StoryTypeHome struct {
 	TypeName string `json:"type_name"`
 }
 
-func GetHomeData() (Home, error) {
+func GetHomeData() (Response, error) {
+	var res Response
 	var homeData Home
 
 	// Fetching highlighted stories
 	highlightedStories, err := getStoriesByHighlight(1)
 	if err != nil {
-		return Home{}, err
+		res.Error = err.Error()
+		return res, err
 	}
 	homeData.HighlightStories = highlightedStories
 
 	// Fetching favorite stories
 	favoriteStories, err := getStoriesByFavorite(1)
 	if err != nil {
-		return Home{}, err
+		res.Error = err.Error()
+		return res, err
 	}
 	homeData.FavoriteStories = favoriteStories
 
 	// Fetching all story types
 	storyTypes, err := getAllStoryTypes()
 	if err != nil {
-		return Home{}, err
+		res.Error = err.Error()
+		return res, err
 	}
 	homeData.StoryTypes = storyTypes
 
-	return homeData, nil
+	// Set the data in the Response struct
+	res.Data = struct {
+		HighlightStories []StoryHome     `json:"highlight_stories"`
+		FavoriteStories  []StoryHome     `json:"favorite_stories"`
+		StoryTypes       []StoryTypeHome `json:"story_types"`
+	}{
+		HighlightStories: homeData.HighlightStories,
+		FavoriteStories:  homeData.FavoriteStories,
+		StoryTypes:       homeData.StoryTypes,
+	}
+
+	return res, nil
 }
 
 func getStoriesByHighlight(highlight int) ([]StoryHome, error) {
