@@ -57,13 +57,15 @@ func Init() *echo.Echo {
 	e.POST("/api/v1/story", controllers.CreateStory)
 	e.PUT("/api/v1/story", controllers.UpdateStory)
 	e.DELETE("/api/v1/story/:story_id", controllers.DeleteStory)
+	e.GET("/api/v1/story_recommendation/random/:exclude_story_id", controllers.GetStoriesRecommendationRandom)
 
 	// Bookmark
 	e.GET("/api/v1/bookmark", controllers.GetAllBookmarks)
-	e.GET("/api/v1/bookmark/:bookmard_id", controllers.GetBookmarkDetail)
+	e.GET("/api/v1/bookmark/user/:user_id", controllers.GetAllBookmarksByUserID)
+	e.GET("/api/v1/bookmark/:bookmark_id", controllers.GetBookmarkDetail)
 	e.POST("/api/v1/bookmark", controllers.CreateBookmark)
 	e.PUT("/api/v1/bookmark", controllers.UpdateBookmark)
-	e.DELETE("/api/v1/bookmark/:bookmard_id", controllers.DeleteBookmark)
+	e.DELETE("/api/v1/bookmark/:bookmark_id", controllers.DeleteBookmark)
 
 	// Home
 	e.GET("/api/v1/home", controllers.GetHomeData)

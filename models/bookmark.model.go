@@ -106,6 +106,98 @@ func GetAllBookmarks(page, pageSize int, keyword string) (Response, error) {
 	return res, nil
 }
 
+// GetAllBookmarksByUserID retrieves all bookmarks by user ID with pagination and optional keyword search
+func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Response, error) {
+	var res Response
+	var arrobj []Bookmark
+	var meta Meta
+
+	con := db.CreateCon()
+
+	// Add a WHERE clause to filter bookmarks based on the keyword and user ID
+	whereClause := fmt.Sprintf("WHERE user_id = %d", userID)
+	if keyword != "" {
+		whereClause += fmt.Sprintf(" AND story_id LIKE '%%%s%%'", keyword)
+	}
+
+	// Count total items in the database for the specific user
+	var totalItems int
+	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM bookmark %s", whereClause)).Scan(&totalItems)
+	if err != nil {
+		return res, err
+	}
+
+	// If no items are found, return an empty response data object
+	if totalItems == 0 {
+		meta.Limit = pageSize
+		meta.Page = page
+		meta.TotalPages = 0
+		meta.TotalItems = totalItems
+
+		res.Data = map[string]interface{}{
+			"bookmarks": make([]Bookmark, 0), // Empty slice
+			"meta":      meta,
+		}
+
+		return res, nil
+	}
+
+	// Load the UTC+8 time zone
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return res, err
+	}
+
+	// Calculate the total number of pages
+	totalPages := calculateTotalPages(totalItems, pageSize)
+
+	// Check if the requested page is greater than the total number of pages
+	if page > totalPages {
+		return res, fmt.Errorf("requested page (%d) exceeds total number of pages (%d)", page, totalPages)
+	}
+
+	// Calculate the offset based on the page number and page size
+	offset := (page - 1) * pageSize
+	sqlStatement := fmt.Sprintf("SELECT * FROM bookmark %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
+	rows, err := con.Query(sqlStatement)
+	if err != nil {
+		return res, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var obj Bookmark
+		err := rows.Scan(
+			&obj.BookmarkID,
+			&obj.UserID,
+			&obj.StoryID,
+			&obj.CreatedAt,
+			&obj.UpdatedAt,
+		)
+		if err != nil {
+			return res, err
+		}
+
+		// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
+		obj.CreatedAt = obj.CreatedAt.In(loc)
+		obj.UpdatedAt = obj.UpdatedAt.In(loc)
+
+		arrobj = append(arrobj, obj)
+
+		meta.Limit = pageSize
+		meta.Page = page
+		meta.TotalPages = calculateTotalPages(totalItems, pageSize)
+		meta.TotalItems = totalItems
+	}
+
+	res.Data = map[string]interface{}{
+		"bookmarks": arrobj,
+		"meta":      meta,
+	}
+
+	return res, nil
+}
+
 // GetBookmarkDetail retrieves a single bookmark by its ID
 func GetBookmarkDetail(bookmarkID int) (Response, error) {
 	var bookmarkDetail Bookmark

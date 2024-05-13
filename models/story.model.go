@@ -616,6 +616,97 @@ func DeleteStory(storyID int) (Response, error) {
 	return res, err
 }
 
+func GetStoriesRecommendationRandom(limit int, excludeStoryID int) (Response, error) {
+	var res Response
+	var arrobj []StoryPreview
+
+	con := db.CreateCon()
+
+	// Add a condition to exclude a specific story ID
+	excludeCondition := ""
+	if excludeStoryID != 0 {
+		excludeCondition = fmt.Sprintf(" AND s.story_id != %d", excludeStoryID)
+	}
+
+	// SQL statement using raw string literals
+	sqlStatement := `
+		SELECT 
+			s.story_id, 
+			s.type_id, 
+			s.origin_id, 
+			s.title, 
+			s.total_content, 
+			s.released_date, 
+			s.thumbnail_image, 
+			s.read_count, 
+			s.is_highligthed, 
+			s.is_favorited, 
+			t.type_name, 
+			o.origin_name, 
+			GROUP_CONCAT(g.genre_name) AS genre_name 
+		FROM 
+			story s 
+			LEFT JOIN type t ON s.type_id = t.type_id 
+			LEFT JOIN origin o ON s.origin_id = o.origin_id 
+			LEFT JOIN story_genre sg ON s.story_id = sg.story_id 
+			LEFT JOIN genre g ON sg.genre_id = g.genre_id 
+		WHERE 1 ` + excludeCondition + `
+		GROUP BY 
+			s.story_id 
+		ORDER BY 
+			RAND()
+		LIMIT ?`
+
+	rows, err := con.Query(sqlStatement, limit)
+	if err != nil {
+		return res, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var obj StoryPreview
+		var genreNames sql.NullString
+		err := rows.Scan(
+			&obj.StoryID,
+			&obj.TypeID,
+			&obj.OriginID,
+			&obj.Title,
+			&obj.TotalContent,
+			&obj.ReleasedDate,
+			&obj.ThumbnailImage,
+			&obj.ReadCount,
+			&obj.IsHighlighted,
+			&obj.IsFavorited,
+			&obj.TypeName,
+			&obj.OriginName,
+			&genreNames,
+		)
+		if err != nil {
+			return res, err
+		}
+
+		// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
+		loc, err := time.LoadLocation("Asia/Shanghai")
+		if err != nil {
+			return res, err
+		}
+		obj.ReleasedDate = obj.ReleasedDate.In(loc)
+
+		// Parse genre names
+		if genreNames.Valid {
+			obj.GenreName = strings.Split(genreNames.String, ",")
+		}
+
+		arrobj = append(arrobj, obj)
+	}
+
+	res.Data = map[string]interface{}{
+		"stories": arrobj,
+	}
+
+	return res, nil
+}
+
 func stringsToIntSlice(s string) ([]int, error) {
 	// Pisahkan string menjadi potongan-potongan integer
 	parts := strings.Split(s, ",")

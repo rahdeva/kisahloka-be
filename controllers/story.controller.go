@@ -175,3 +175,25 @@ func DeleteStory(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, result)
 }
+
+func GetStoriesRecommendationRandom(c echo.Context) error {
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit < 1 {
+		limit = 4 // Default limit
+	}
+
+	excludeStoryID, err := strconv.Atoi(c.QueryParam("exclude_story_id"))
+	if err != nil {
+		excludeStoryID = 0 // Default exclude story ID
+	}
+
+	result, err := models.GetStoriesRecommendationRandom(limit, excludeStoryID)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			map[string]string{"message": err.Error()},
+		)
+	}
+
+	return c.JSON(http.StatusOK, result)
+}

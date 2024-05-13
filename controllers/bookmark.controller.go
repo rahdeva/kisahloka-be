@@ -34,6 +34,37 @@ func GetAllBookmarks(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+// GetAllBookmarksByUserID retrieves all bookmarks by user ID with pagination and optional keyword search
+func GetAllBookmarksByUserID(c echo.Context) error {
+	userID, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user_id"})
+	}
+
+	// Get query parameters for pagination
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(c.QueryParam("pageSize"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	keyword := c.QueryParam("keyword")
+
+	result, err := models.GetAllBookmarksByUserID(userID, page, pageSize, keyword)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			map[string]string{"message": err.Error()},
+		)
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
 // GetBookmarkDetail retrieves a single bookmark by its ID
 func GetBookmarkDetail(c echo.Context) error {
 	bookmarkID, err := strconv.Atoi(c.Param("bookmark_id"))
@@ -54,22 +85,19 @@ func GetBookmarkDetail(c echo.Context) error {
 
 // CreateBookmark creates a new bookmark
 func CreateBookmark(c echo.Context) error {
-	userID, err := strconv.Atoi(c.FormValue("user_id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user_id"})
+	var bookmarkData struct {
+		UserID  int `json:"user_id"`
+		StoryID int `json:"story_id"`
 	}
 
-	storyID, err := strconv.Atoi(c.FormValue("story_id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid story_id"})
+	// Parse the request body to populate bookmarkData struct
+	if err := c.Bind(&bookmarkData); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
 	}
 
-	result, err := models.CreateBookmark(userID, storyID)
+	result, err := models.CreateBookmark(bookmarkData.UserID, bookmarkData.StoryID)
 	if err != nil {
-		return c.JSON(
-			http.StatusInternalServerError,
-			map[string]string{"message": err.Error()},
-		)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, result)
