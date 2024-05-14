@@ -650,7 +650,7 @@ func GetStoriesRecommendationRandom(limit int, excludeStoryID int) (Response, er
 			LEFT JOIN origin o ON s.origin_id = o.origin_id 
 			LEFT JOIN story_genre sg ON s.story_id = sg.story_id 
 			LEFT JOIN genre g ON sg.genre_id = g.genre_id 
-		WHERE 1 ` + excludeCondition + `
+		WHERE ` + excludeCondition + `
 		GROUP BY 
 			s.story_id 
 		ORDER BY 
