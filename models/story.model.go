@@ -622,12 +622,6 @@ func GetStoriesRecommendationRandom(limit int, excludeStoryID int) (Response, er
 
 	con := db.CreateCon()
 
-	// Add a condition to exclude a specific story ID
-	excludeCondition := ""
-	if excludeStoryID != 0 {
-		excludeCondition = fmt.Sprintf(" AND s.story_id != %d", excludeStoryID)
-	}
-
 	// SQL statement using raw string literals
 	sqlStatement := `
 		SELECT 
@@ -650,14 +644,15 @@ func GetStoriesRecommendationRandom(limit int, excludeStoryID int) (Response, er
 			LEFT JOIN origin o ON s.origin_id = o.origin_id 
 			LEFT JOIN story_genre sg ON s.story_id = sg.story_id 
 			LEFT JOIN genre g ON sg.genre_id = g.genre_id 
-		WHERE ` + excludeCondition + `
+		WHERE s.story_id != ?
 		GROUP BY 
 			s.story_id 
 		ORDER BY 
 			RAND()
-		LIMIT ?`
+		LIMIT ?
+	`
 
-	rows, err := con.Query(sqlStatement, limit)
+	rows, err := con.Query(sqlStatement, excludeStoryID, limit)
 	if err != nil {
 		return res, err
 	}

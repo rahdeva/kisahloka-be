@@ -182,7 +182,7 @@ func GetStoriesRecommendationRandom(c echo.Context) error {
 		limit = 4 // Default limit
 	}
 
-	excludeStoryID, err := strconv.Atoi(c.QueryParam("exclude_story_id"))
+	excludeStoryID, err := strconv.Atoi(c.Param("exclude_story_id"))
 	if err != nil {
 		excludeStoryID = 0 // Default exclude story ID
 	}

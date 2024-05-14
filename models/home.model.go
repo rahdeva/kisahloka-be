@@ -21,6 +21,9 @@ type StoryHome struct {
 	ThumbnailImage string    `json:"thumbnail_image"`
 	IsHighlighted  int       `json:"is_highligthed"`
 	IsFavorited    int       `json:"is_favorited"`
+	TotalContent   int       `json:"total_content"`
+	ReleasedDate   time.Time `json:"released_date"`
+	ReadCount      int       `json:"read_count"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -77,7 +80,7 @@ func getStoriesByHighlight(highlight int) ([]StoryHome, error) {
 
 	db := db.CreateCon()
 
-	rows, err := db.Query("SELECT s.story_id, s.type_id, t.type_name, s.origin_id, o.origin_name, s.title, s.thumbnail_image, s.is_highligthed, s.is_favorited, s.created_at, s.updated_at FROM story s JOIN type t ON s.type_id = t.type_id JOIN origin o ON s.origin_id = o.origin_id WHERE s.is_highligthed = ?", highlight)
+	rows, err := db.Query("SELECT s.story_id, s.type_id, t.type_name, s.origin_id, o.origin_name, s.title, s.thumbnail_image, s.is_highligthed, s.is_favorited, s.total_content, s.released_date, s.read_count, s.created_at, s.updated_at FROM story s JOIN type t ON s.type_id = t.type_id JOIN origin o ON s.origin_id = o.origin_id WHERE s.is_highligthed = ?", highlight)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +88,7 @@ func getStoriesByHighlight(highlight int) ([]StoryHome, error) {
 
 	for rows.Next() {
 		var story StoryHome
-		err := rows.Scan(&story.StoryID, &story.TypeID, &story.TypeName, &story.OriginID, &story.OriginName, &story.Title, &story.ThumbnailImage, &story.IsHighlighted, &story.IsFavorited, &story.CreatedAt, &story.UpdatedAt)
+		err := rows.Scan(&story.StoryID, &story.TypeID, &story.TypeName, &story.OriginID, &story.OriginName, &story.Title, &story.ThumbnailImage, &story.IsHighlighted, &story.IsFavorited, &story.TotalContent, &story.ReleasedDate, &story.ReadCount, &story.CreatedAt, &story.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +107,7 @@ func getStoriesByFavorite(favorite int) ([]StoryHome, error) {
 
 	db := db.CreateCon()
 
-	rows, err := db.Query("SELECT s.story_id, s.type_id, t.type_name, s.origin_id, o.origin_name, s.title, s.thumbnail_image, s.is_highligthed, s.is_favorited, s.created_at, s.updated_at FROM story s JOIN type t ON s.type_id = t.type_id JOIN origin o ON s.origin_id = o.origin_id WHERE s.is_favorited = ?", favorite)
+	rows, err := db.Query("SELECT s.story_id, s.type_id, t.type_name, s.origin_id, o.origin_name, s.title, s.thumbnail_image, s.is_highligthed, s.is_favorited, s.total_content, s.released_date, s.read_count, s.created_at, s.updated_at FROM story s JOIN type t ON s.type_id = t.type_id JOIN origin o ON s.origin_id = o.origin_id WHERE s.is_favorited = ?", favorite)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +115,7 @@ func getStoriesByFavorite(favorite int) ([]StoryHome, error) {
 
 	for rows.Next() {
 		var story StoryHome
-		err := rows.Scan(&story.StoryID, &story.TypeID, &story.TypeName, &story.OriginID, &story.OriginName, &story.Title, &story.ThumbnailImage, &story.IsHighlighted, &story.IsFavorited, &story.CreatedAt, &story.UpdatedAt)
+		err := rows.Scan(&story.StoryID, &story.TypeID, &story.TypeName, &story.OriginID, &story.OriginName, &story.Title, &story.ThumbnailImage, &story.IsHighlighted, &story.IsFavorited, &story.TotalContent, &story.ReleasedDate, &story.ReadCount, &story.CreatedAt, &story.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
