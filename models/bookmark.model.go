@@ -7,11 +7,14 @@ import (
 )
 
 type Bookmark struct {
-	BookmarkID int       `json:"bookmark_id"`
-	UserID     int       `json:"user_id"`
-	StoryID    int       `json:"story_id"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	BookmarkID     int       `json:"bookmark_id"`
+	UserID         int       `json:"user_id"`
+	StoryID        int       `json:"story_id"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Title          string    `json:"title"`
+	OriginName     string    `json:"origin_name"`
+	ThumbnailImage string    `json:"thumbnail_image"`
 }
 
 // GetAllBookmarks retrieves all bookmarks with pagination and optional keyword search
@@ -158,7 +161,19 @@ func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Respon
 
 	// Calculate the offset based on the page number and page size
 	offset := (page - 1) * pageSize
-	sqlStatement := fmt.Sprintf("SELECT * FROM bookmark %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
+	sqlStatement := fmt.Sprintf(
+		`SELECT 
+			bookmark.*, 
+			story.title, 
+			origin.origin_name, 
+			story.thumbnail_image 
+		FROM 
+			bookmark 
+			INNER JOIN story ON bookmark.story_id = story.story_id 
+			INNER JOIN origin ON story.origin_id = origin.origin_id 
+			%s 
+		LIMIT %d OFFSET %d
+		`, whereClause, pageSize, offset)
 	rows, err := con.Query(sqlStatement)
 	if err != nil {
 		return res, err
@@ -167,12 +182,16 @@ func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Respon
 
 	for rows.Next() {
 		var obj Bookmark
+		var title, originName, thumbnailImage string
 		err := rows.Scan(
 			&obj.BookmarkID,
 			&obj.UserID,
 			&obj.StoryID,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
+			&title,
+			&originName,
+			&thumbnailImage,
 		)
 		if err != nil {
 			return res, err
@@ -181,6 +200,9 @@ func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Respon
 		// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
 		obj.CreatedAt = obj.CreatedAt.In(loc)
 		obj.UpdatedAt = obj.UpdatedAt.In(loc)
+		obj.Title = title
+		obj.OriginName = originName
+		obj.ThumbnailImage = thumbnailImage
 
 		arrobj = append(arrobj, obj)
 
