@@ -15,6 +15,7 @@ type Bookmark struct {
 	Title          string    `json:"title"`
 	OriginName     string    `json:"origin_name"`
 	ThumbnailImage string    `json:"thumbnail_image"`
+	TotalContent   int       `json:"total_content"`
 }
 
 // GetAllBookmarks retrieves all bookmarks with pagination and optional keyword search
@@ -166,7 +167,8 @@ func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Respon
 			bookmark.*, 
 			story.title, 
 			origin.origin_name, 
-			story.thumbnail_image 
+			story.thumbnail_image,
+			story.total_content
 		FROM 
 			bookmark 
 			INNER JOIN story ON bookmark.story_id = story.story_id 
@@ -192,6 +194,7 @@ func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Respon
 			&title,
 			&originName,
 			&thumbnailImage,
+			&obj.TotalContent,
 		)
 		if err != nil {
 			return res, err
