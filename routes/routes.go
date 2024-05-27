@@ -45,6 +45,7 @@ func Init() *echo.Echo {
 	// User
 	e.GET("/api/v1/user", controllers.GetAllUsers)
 	e.GET("/api/v1/user/:user_id", controllers.GetUserDetail)
+	e.GET("/api/v1/user/uid/:uid", controllers.GetUserDetailUID)
 	e.POST("/api/v1/user", controllers.CreateUser)
 	e.PUT("/api/v1/user", controllers.UpdateUser)
 	e.DELETE("/api/v1/user/:user_id", controllers.DeleteUser)

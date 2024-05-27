@@ -53,6 +53,21 @@ func GetUserDetail(c echo.Context) error {
 	return c.JSON(http.StatusOK, userDetail)
 }
 
+// GetUserDetailUID returns details of a specific user by its UID
+func GetUserDetailUID(c echo.Context) error {
+	uid := c.Param("uid")
+
+	userDetail, err := models.GetUserDetailUID(uid)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			map[string]string{"message": err.Error()},
+		)
+	}
+
+	return c.JSON(http.StatusOK, userDetail)
+}
+
 // CreateUser creates a new user with the provided data
 func CreateUser(c echo.Context) error {
 	var userObj models.User
@@ -68,7 +83,7 @@ func CreateUser(c echo.Context) error {
 	}
 
 	// Call the CreateUser function from the models package
-	result, err := models.CreateUser(userObj.Email, userObj.Name, userObj.RoleID)
+	result, err := models.CreateUser(userObj.UID, userObj.RoleID, userObj.Email, userObj.Name, userObj.Gender, userObj.BirthDate)
 	if err != nil {
 		return c.JSON(
 			http.StatusInternalServerError,

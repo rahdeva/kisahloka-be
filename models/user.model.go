@@ -10,14 +10,16 @@ import (
 
 type User struct {
 	UserID    int       `json:"user_id"`
+	UID       string    `json:"uid"`
 	RoleID    int       `json:"role_id"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
+	BirthDate time.Time `json:"birth_date"`
+	Gender    string    `json:"gender"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// GetAllUsers retrieves all users with pagination and optional keyword search
 func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 	var res Response
 	var arrobj reflect.Value
@@ -25,20 +27,17 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 
 	con := db.CreateCon()
 
-	// Add a WHERE clause to filter users based on the keyword
 	whereClause := ""
 	if keyword != "" {
 		whereClause = " WHERE email LIKE '%" + keyword + "%' OR name LIKE '%" + keyword + "%'"
 	}
 
-	// Count total items in the database
 	var totalItems int
 	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM user %s", whereClause)).Scan(&totalItems)
 	if err != nil {
 		return res, err
 	}
 
-	// If no items are found, return an empty response data object
 	if totalItems == 0 {
 		meta.Limit = pageSize
 		meta.Page = page
@@ -46,28 +45,24 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 		meta.TotalItems = totalItems
 
 		res.Data = map[string]interface{}{
-			"users": make([]interface{}, 0), // Empty slice
+			"users": make([]interface{}, 0),
 			"meta":  meta,
 		}
 
 		return res, nil
 	}
 
-	// Load the UTC+8 time zone
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		return res, err
 	}
 
-	// Calculate the total number of pages
 	totalPages := calculateTotalPages(totalItems, pageSize)
 
-	// Check if the requested page is greater than the total number of pages
 	if page > totalPages {
 		return res, fmt.Errorf("requested page (%d) exceeds total number of pages (%d)", page, totalPages)
 	}
 
-	// Calculate the offset based on the page number and page size
 	offset := (page - 1) * pageSize
 	sqlStatement := fmt.Sprintf("SELECT * FROM user %s LIMIT %d OFFSET %d", whereClause, pageSize, offset)
 	rows, err := con.Query(sqlStatement)
@@ -80,9 +75,12 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 		var obj User
 		err := rows.Scan(
 			&obj.UserID,
+			&obj.UID,
 			&obj.RoleID,
 			&obj.Email,
 			&obj.Name,
+			&obj.BirthDate,
+			&obj.Gender,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
 		)
@@ -90,7 +88,6 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 			return res, err
 		}
 
-		// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
 		obj.CreatedAt = obj.CreatedAt.In(loc)
 		obj.UpdatedAt = obj.UpdatedAt.In(loc)
 
@@ -114,7 +111,6 @@ func GetAllUsers(page, pageSize int, keyword string) (Response, error) {
 	return res, nil
 }
 
-// GetUserDetail retrieves details of a specific user by its ID
 func GetUserDetail(userID int) (Response, error) {
 	var userDetail User
 	var res Response
@@ -127,9 +123,12 @@ func GetUserDetail(userID int) (Response, error) {
 
 	err := row.Scan(
 		&userDetail.UserID,
+		&userDetail.UID,
 		&userDetail.RoleID,
 		&userDetail.Email,
 		&userDetail.Name,
+		&userDetail.BirthDate,
+		&userDetail.Gender,
 		&userDetail.CreatedAt,
 		&userDetail.UpdatedAt,
 	)
@@ -138,13 +137,11 @@ func GetUserDetail(userID int) (Response, error) {
 		return res, err
 	}
 
-	// Load the UTC+8 time zone
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		return res, err
 	}
 
-	// Convert time fields to UTC+8 (Asia/Shanghai) before including them in the response
 	userDetail.CreatedAt = userDetail.CreatedAt.In(loc)
 	userDetail.UpdatedAt = userDetail.UpdatedAt.In(loc)
 
@@ -155,13 +152,53 @@ func GetUserDetail(userID int) (Response, error) {
 	return res, nil
 }
 
-// CreateUser creates a new user with the provided data
-func CreateUser(email, name string, roleID int) (Response, error) {
+func GetUserDetailUID(uid string) (Response, error) {
+	var userDetail User
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "INSERT INTO users (role_id, email, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+	sqlStatement := "SELECT * FROM user WHERE uid = ?"
+
+	row := con.QueryRow(sqlStatement, uid)
+
+	err := row.Scan(
+		&userDetail.UserID,
+		&userDetail.UID,
+		&userDetail.RoleID,
+		&userDetail.Email,
+		&userDetail.Name,
+		&userDetail.BirthDate,
+		&userDetail.Gender,
+		&userDetail.CreatedAt,
+		&userDetail.UpdatedAt,
+	)
+
+	if err != nil {
+		return res, err
+	}
+
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return res, err
+	}
+
+	userDetail.CreatedAt = userDetail.CreatedAt.In(loc)
+	userDetail.UpdatedAt = userDetail.UpdatedAt.In(loc)
+
+	res.Data = map[string]interface{}{
+		"user": userDetail,
+	}
+
+	return res, nil
+}
+
+func CreateUser(uid string, roleID int, email, name, gender string, birthDate time.Time) (Response, error) {
+	var res Response
+
+	con := db.CreateCon()
+
+	sqlStatement := "INSERT INTO user (uid, role_id, email, name, birth_date, gender, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
 	stmt, err := con.Prepare(sqlStatement)
 
@@ -169,7 +206,6 @@ func CreateUser(email, name string, roleID int) (Response, error) {
 		return res, err
 	}
 
-	// Load the UTC+8 time zone
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		return res, err
@@ -179,9 +215,12 @@ func CreateUser(email, name string, roleID int) (Response, error) {
 	updated_at := time.Now()
 
 	result, err := stmt.Exec(
+		uid,
 		roleID,
 		email,
 		name,
+		birthDate,
+		gender,
 		created_at,
 		updated_at,
 	)
@@ -208,19 +247,16 @@ func CreateUser(email, name string, roleID int) (Response, error) {
 func UpdateUser(userID int, updateFields map[string]interface{}) (Response, error) {
 	var res Response
 
-	// Load the UTC+8 time zone
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		return res, err
 	}
 
-	// Add or update the 'updated_at' field in the updateFields map
 	updateFields["updated_at"] = time.Now().In(loc)
 	updated_at := updateFields["updated_at"]
 
 	con := db.CreateCon()
 
-	// Construct the SET part of the SQL statement dynamically
 	setStatement := "SET "
 	values := []interface{}{}
 	i := 0
@@ -234,8 +270,7 @@ func UpdateUser(userID int, updateFields map[string]interface{}) (Response, erro
 		i++
 	}
 
-	// Construct the final SQL statement
-	sqlStatement := "UPDATE users " + setStatement + " WHERE user_id = ?"
+	sqlStatement := "UPDATE user " + setStatement + " WHERE user_id = ?"
 	values = append(values, userID)
 
 	stmt, err := con.Prepare(sqlStatement)
