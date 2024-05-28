@@ -66,7 +66,23 @@ func GetStoryDetail(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid story_id"})
 	}
 
-	storyDetail, err := models.GetStoryDetail(storyID)
+	userIDParam := c.QueryParam("user_id")
+	var userID *int
+	if userIDParam != "" {
+		parsedUserID, err := strconv.Atoi(userIDParam)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user_id"})
+		}
+		userID = &parsedUserID
+	}
+
+	uidParam := c.QueryParam("uid")
+	var uid *string
+	if uidParam != "" {
+		uid = &uidParam
+	}
+
+	storyDetail, err := models.GetStoryDetail(storyID, userID, uid)
 	if err != nil {
 		return c.JSON(
 			http.StatusInternalServerError,

@@ -86,8 +86,9 @@ func GetBookmarkDetail(c echo.Context) error {
 // CreateBookmark creates a new bookmark
 func CreateBookmark(c echo.Context) error {
 	var bookmarkData struct {
-		UserID  int `json:"user_id"`
-		StoryID int `json:"story_id"`
+		UserID  int    `json:"user_id"`
+		StoryID int    `json:"story_id"`
+		UID     string `json:"uid"`
 	}
 
 	// Parse the request body to populate bookmarkData struct
@@ -95,7 +96,7 @@ func CreateBookmark(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
 	}
 
-	result, err := models.CreateBookmark(bookmarkData.UserID, bookmarkData.StoryID)
+	result, err := models.CreateBookmark(bookmarkData.UserID, bookmarkData.StoryID, bookmarkData.UID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
 	}

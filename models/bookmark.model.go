@@ -9,6 +9,7 @@ import (
 type Bookmark struct {
 	BookmarkID     int       `json:"bookmark_id"`
 	UserID         int       `json:"user_id"`
+	UID            string    `json:"uid"`
 	StoryID        int       `json:"story_id"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -264,12 +265,12 @@ func GetBookmarkDetail(bookmarkID int) (Response, error) {
 }
 
 // CreateBookmark creates a new bookmark
-func CreateBookmark(userID, storyID int) (Response, error) {
+func CreateBookmark(userID int, storyID int, uid string) (Response, error) {
 	var res Response
 
 	con := db.CreateCon()
 
-	sqlStatement := "INSERT INTO bookmark (user_id, story_id, created_at, updated_at) VALUES (?, ?, ?, ?)"
+	sqlStatement := "INSERT INTO bookmark (user_id, uid, story_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
 
 	stmt, err := con.Prepare(sqlStatement)
 
@@ -288,6 +289,7 @@ func CreateBookmark(userID, storyID int) (Response, error) {
 
 	result, err := stmt.Exec(
 		userID,
+		uid,
 		storyID,
 		created_at,
 		updated_at,

@@ -66,6 +66,8 @@ type StoryDetail struct {
 	Synopsis       string    `json:"synopsis"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+	IsBookmark     int       `json:"is_bookmark"`
+	BookmarkID     int       `json:"bookmark_id"`
 }
 
 type StoryContentOnList struct {
@@ -401,7 +403,7 @@ func GetStoryContentOnList(storyID int) ([]StoryContentOnList, error) {
 	return content, nil
 }
 
-func GetStoryDetail(storyID int) (Response, error) {
+func GetStoryDetail(storyID int, userID *int, uid *string) (Response, error) {
 	var storyDetail StoryDetail
 	var res Response
 
@@ -459,12 +461,33 @@ func GetStoryDetail(storyID int) (Response, error) {
 	storyDetail.GenreID = stringsToIntSlice2(genreIDs)
 	storyDetail.GenreName = strings.Split(genreNames, ",")
 
-	// // Fetch story content
-	// content, err := GetStoryContentOnList(storyID)
-	// if err != nil {
-	// 	return res, err
-	// }
-	// storyDetail.StoryContent = content
+	// Check if the story is bookmarked by the user, if userID or uid is provided
+	var bookmarkID int
+	if userID != nil || uid != nil {
+		var bookmarkQuery string
+		var args []interface{}
+		if userID != nil {
+			bookmarkQuery = `SELECT bookmark_id FROM bookmark WHERE user_id = ? AND story_id = ?`
+			args = append(args, *userID, storyID)
+		} else if uid != nil {
+			bookmarkQuery = `SELECT bookmark_id FROM bookmark WHERE uid = ? AND story_id = ?`
+			args = append(args, *uid, storyID)
+		}
+		err = con.QueryRow(bookmarkQuery, args...).Scan(&bookmarkID)
+		if err != nil && err != sql.ErrNoRows {
+			return res, err
+		}
+		if err == sql.ErrNoRows {
+			storyDetail.IsBookmark = 0
+			storyDetail.BookmarkID = 0
+		} else {
+			storyDetail.IsBookmark = 1
+			storyDetail.BookmarkID = bookmarkID
+		}
+	} else {
+		storyDetail.IsBookmark = 0
+		storyDetail.BookmarkID = 0
+	}
 
 	res.Data = map[string]interface{}{
 		"story": storyDetail,
