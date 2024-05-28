@@ -244,22 +244,36 @@ func GetStoryContentOnStory(storyID int) (Response, error) {
 	return res, nil
 }
 
-func GetAllStoriesPreview(page, pageSize int, keyword string) (Response, error) {
+func GetAllStoriesPreview(page, pageSize int, keyword string, typeID int) (Response, error) {
 	var res Response
 	var arrobj []StoryPreview // Menggunakan struktur StoryPreview
 	var meta Meta
 
 	con := db.CreateCon()
 
-	// Add a WHERE clause to filter stories based on the keyword
+	// Add a WHERE clause to filter stories based on the keyword and type_id (if provided)
+	whereClause1 := ""
 	whereClause := ""
 	if keyword != "" {
-		whereClause = " WHERE title LIKE '%" + keyword + "%'"
+		whereClause += " WHERE title LIKE '%" + keyword + "%'"
+		whereClause1 += " WHERE title LIKE '%" + keyword + "%'"
 	}
+	if typeID != 0 {
+		if whereClause == "" {
+			whereClause += " WHERE"
+			whereClause1 += " WHERE"
+		} else {
+			whereClause += " AND"
+			whereClause1 += " AND"
+		}
+		whereClause += " s.type_id = " + strconv.Itoa(typeID)
+		whereClause1 += " type_id = " + strconv.Itoa(typeID)
+	}
+	print(whereClause1)
 
 	// Count total items in the database
 	var totalItems int
-	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM story %s", whereClause)).Scan(&totalItems)
+	err := con.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM story %s", whereClause1)).Scan(&totalItems)
 	if err != nil {
 		return res, err
 	}
@@ -321,7 +335,8 @@ func GetAllStoriesPreview(page, pageSize int, keyword string) (Response, error) 
 		GROUP BY 
 			s.story_id 
 		LIMIT ? OFFSET ?`
-
+	print("sqlStatement")
+	print(sqlStatement)
 	rows, err := con.Query(sqlStatement, pageSize, offset)
 	if err != nil {
 		return res, err

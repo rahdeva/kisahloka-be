@@ -49,7 +49,12 @@ func GetAllStoriesPreview(c echo.Context) error {
 
 	keyword := c.QueryParam("keyword")
 
-	result, err := models.GetAllStoriesPreview(page, pageSize, keyword)
+	typeID, err := strconv.Atoi(c.QueryParam("type_id"))
+	if err != nil {
+		typeID = 0
+	}
+
+	result, err := models.GetAllStoriesPreview(page, pageSize, keyword, typeID)
 	if err != nil {
 		return c.JSON(
 			http.StatusInternalServerError,
