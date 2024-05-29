@@ -269,7 +269,6 @@ func GetAllStoriesPreview(page, pageSize int, keyword string, typeID int) (Respo
 		whereClause += " s.type_id = " + strconv.Itoa(typeID)
 		whereClause1 += " type_id = " + strconv.Itoa(typeID)
 	}
-	print(whereClause1)
 
 	// Count total items in the database
 	var totalItems int
