@@ -83,6 +83,7 @@ func GetAllBookmarks(page, pageSize int, keyword string) (Response, error) {
 		err := rows.Scan(
 			&obj.BookmarkID,
 			&obj.UserID,
+			&obj.UID,
 			&obj.StoryID,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
@@ -189,6 +190,7 @@ func GetAllBookmarksByUserID(userID, page, pageSize int, keyword string) (Respon
 		err := rows.Scan(
 			&obj.BookmarkID,
 			&obj.UserID,
+			&obj.UID,
 			&obj.StoryID,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
@@ -238,6 +240,7 @@ func GetBookmarkDetail(bookmarkID int) (Response, error) {
 	err := row.Scan(
 		&bookmarkDetail.BookmarkID,
 		&bookmarkDetail.UserID,
+		&bookmarkDetail.UID,
 		&bookmarkDetail.StoryID,
 		&bookmarkDetail.CreatedAt,
 		&bookmarkDetail.UpdatedAt,
