@@ -335,8 +335,7 @@ func GetAllStoriesPreview(page, pageSize int, keyword string, typeID int) (Respo
 		GROUP BY 
 			s.story_id 
 		LIMIT ? OFFSET ?`
-	print("sqlStatement")
-	print(sqlStatement)
+
 	rows, err := con.Query(sqlStatement, pageSize, offset)
 	if err != nil {
 		return res, err
